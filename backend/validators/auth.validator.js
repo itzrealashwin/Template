@@ -40,7 +40,7 @@ const verifyOtpSchema = Joi.object({
 });
 
 const googleAuthSchema = Joi.object({
-  idToken: Joi.string().required().messages({
+  code: Joi.string().required().messages({
     'any.required': 'Google ID token is required',
   }),
 });

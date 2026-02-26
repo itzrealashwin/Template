@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -9,12 +10,13 @@ import { Separator } from "@/components/ui/separator";
 export default function Register() {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
+    name: "",
     email: "",
     password: "",
-    confirmPassword: "",
   });
   const [errors, setErrors] = useState({});
-  const [isLoading, setIsLoading] = useState(false);
+
+  const { registerAsync, isRegistering } = useAuth();
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -33,6 +35,10 @@ export default function Register() {
   const validateForm = () => {
     const newErrors = {};
 
+    if (!formData.name.trim()) {
+      newErrors.name = "Name is required";
+    }
+
     if (!formData.email) {
       newErrors.email = "Email is required";
     } else if (!formData.email.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) {
@@ -45,35 +51,33 @@ export default function Register() {
       newErrors.password = "Password must be at least 8 characters";
     }
 
-    if (!formData.confirmPassword) {
-      newErrors.confirmPassword = "Please confirm your password";
-    } else if (formData.password !== formData.confirmPassword) {
-      newErrors.confirmPassword = "Passwords do not match";
-    }
-
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = async (e) => {
+ const handleSubmit = async (e) => {
     e.preventDefault();
 
     if (!validateForm()) return;
 
-    setIsLoading(true);
+    setErrors((prev) => ({ ...prev, submit: "" }));
+
     try {
-      // TODO: Implement actual registration API call
-      console.log("Registering user:", { email: formData.email });
+      await registerAsync({ 
+        name: formData.name, 
+        email: formData.email, 
+        password: formData.password 
+      });
       
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      navigate("/verify-email", { state: { email: formData.email } }); 
       
-      // Redirect to login after successful registration
-      navigate("/login");
     } catch (error) {
-      setErrors({ submit: "Registration failed. Please try again." });
-    } finally {
-      setIsLoading(false);
+      setErrors({
+        submit:
+          error?.response?.data?.message ||
+          error?.message ||
+          "Registration failed. Please try again.",
+      });
     }
   };
 
@@ -81,22 +85,36 @@ export default function Register() {
     <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-2 text-center">
-          <CardTitle className="text-3xl">Create Account</CardTitle>
+          <CardTitle className="text-3xl">Create an Account</CardTitle>
           <CardDescription>Sign up to get started</CardDescription>
         </CardHeader>
 
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
+              <Label htmlFor="name">Name</Label>
+              <Input
+                id="name"
+                name="name"
+                type="text"
+                placeholder="Ashwin"
+                value={formData.name}
+                onChange={handleInputChange}
+                disabled={isRegistering}
+              />
+              {errors.name && <p className="text-sm text-red-500">{errors.name}</p>}
+            </div>
+
+            <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <Input
                 id="email"
                 name="email"
                 type="email"
-                placeholder="you@example.com"
+                placeholder="ashwin@example.com"
                 value={formData.email}
                 onChange={handleInputChange}
-                disabled={isLoading}
+                disabled={isRegistering}
               />
               {errors.email && <p className="text-sm text-red-500">{errors.email}</p>}
             </div>
@@ -108,33 +126,18 @@ export default function Register() {
                 name="password"
                 type="password"
                 placeholder="••••••••"
+                autoComplete="new-password"
                 value={formData.password}
                 onChange={handleInputChange}
-                disabled={isLoading}
+                disabled={isRegistering}
               />
               {errors.password && <p className="text-sm text-red-500">{errors.password}</p>}
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="confirmPassword">Confirm Password</Label>
-              <Input
-                id="confirmPassword"
-                name="confirmPassword"
-                type="password"
-                placeholder="••••••••"
-                value={formData.confirmPassword}
-                onChange={handleInputChange}
-                disabled={isLoading}
-              />
-              {errors.confirmPassword && (
-                <p className="text-sm text-red-500">{errors.confirmPassword}</p>
-              )}
-            </div>
-
             {errors.submit && <p className="text-sm text-red-500">{errors.submit}</p>}
 
-            <Button type="submit" className="w-full" size="lg" disabled={isLoading}>
-              {isLoading ? "Creating account..." : "Sign Up"}
+            <Button type="submit" className="w-full" size="lg" disabled={isRegistering}>
+              {isRegistering ? "Creating account..." : "Sign Up"}
             </Button>
           </form>
 
@@ -146,7 +149,7 @@ export default function Register() {
               onClick={() => navigate("/login")}
               className="text-blue-600 hover:text-blue-800 font-semibold"
             >
-              Login here
+              Sign in here
             </button>
           </p>
         </CardContent>

@@ -1,11 +1,18 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-
+import GoogleAuthButton from "@/components/GoogleAuthButton";
 export default function Login() {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
@@ -13,7 +20,6 @@ export default function Login() {
     password: "",
   });
   const [errors, setErrors] = useState({});
-  const [isLoading, setIsLoading] = useState(false);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -46,29 +52,41 @@ export default function Login() {
     return Object.keys(newErrors).length === 0;
   };
 
+  const { loginAsync, isLoggingIn } = useAuth();
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
     if (!validateForm()) return;
 
-    setIsLoading(true);
+    setErrors((prev) => ({ ...prev, submit: "" }));
+
     try {
-      // TODO: Replace with your actual login API call
-      console.log("Logging in with:", { email: formData.email });
-      
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      
-      // Store user data (you can use Context API, Redux, or localStorage)
-      localStorage.setItem("user", JSON.stringify({ email: formData.email }));
-      localStorage.setItem("isAuthenticated", "true");
-      
-      // Redirect to home/dashboard
+      // If loginAsync succeeds, the user is authenticated and verified
+      await loginAsync({ email: formData.email, password: formData.password });
+
+      // Proceed to the main app
       navigate("/");
     } catch (error) {
-      setErrors({ submit: "Login failed. Please try again." });
-    } finally {
-      setIsLoading(false);
+      // Check if the backend rejected the login because the email isn't verified
+      if (error.response?.data?.code === "EMAIL_NOT_VERIFIED") {
+        navigate("/verify-email", {
+          state: {
+            email: formData.email,
+            from: "login",
+          },
+        });
+
+        return; // Stop execution here so we don't set a UI error message
+      }
+
+      // For all other errors (wrong password, server down, etc.), show the error message
+      setErrors({
+        submit:
+          error?.response?.data?.message ||
+          error?.message ||
+          "Login failed. Please try again.",
+      });
     }
   };
 
@@ -91,9 +109,11 @@ export default function Login() {
                 placeholder="you@example.com"
                 value={formData.email}
                 onChange={handleInputChange}
-                disabled={isLoading}
+                disabled={isLoggingIn}
               />
-              {errors.email && <p className="text-sm text-red-500">{errors.email}</p>}
+              {errors.email && (
+                <p className="text-sm text-red-500">{errors.email}</p>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -103,19 +123,32 @@ export default function Login() {
                 name="password"
                 type="password"
                 placeholder="••••••••"
+                autoComplete="new-password"
                 value={formData.password}
                 onChange={handleInputChange}
-                disabled={isLoading}
+                disabled={isLoggingIn}
               />
-              {errors.password && <p className="text-sm text-red-500">{errors.password}</p>}
+              {errors.password && (
+                <p className="text-sm text-red-500">{errors.password}</p>
+              )}
             </div>
 
-            {errors.submit && <p className="text-sm text-red-500">{errors.submit}</p>}
+            {errors.submit && (
+              <p className="text-sm text-red-500">{errors.submit}</p>
+            )}
 
-            <Button type="submit" className="w-full" size="lg" disabled={isLoading}>
-              {isLoading ? "Signing in..." : "Login"}
+            <Button
+              type="submit"
+              className="w-full"
+              size="lg"
+              disabled={isLoggingIn}
+            >
+              {isLoggingIn ? "Signing in..." : "Login"}
             </Button>
           </form>
+          <Separator className="my-4" />
+
+          <GoogleAuthButton />
 
           <Separator className="my-4" />
 

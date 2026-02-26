@@ -1,4 +1,5 @@
 import { QueryClient } from '@tanstack/react-query';
+import axios from 'axios';
 
 export const queryClient = new QueryClient({
   defaultOptions: {
@@ -29,7 +30,6 @@ export const queryClient = new QueryClient({
 });
 
 
-import axios from 'axios';
 
 // Create a customized Axios instance
 export const api = axios.create({

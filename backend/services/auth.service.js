@@ -3,7 +3,7 @@ import OTP from '../model/otp.model.js';
 import AppError from '../utils/AppError.js';
 import { generateOTP } from '../utils/otp.js';
 import { sendOTPEmail } from '../utils/email.js';
-import { verifyGoogleToken } from '../config/google.js';
+import { verifyGoogleCode } from '../config/google.js';
 import {
   generateAccessToken,
   generateRefreshToken,
@@ -117,7 +117,7 @@ const login = async ({ email, password }) => {
   // Need password field for comparison
   const user = await User.findOne({ email }).select('+password +refreshTokens');
   if (!user) {
-    throw new AppError('Invalid email or password.', 401, 'INVALID_CREDENTIALS');
+    throw new AppError('Invalid email.', 401, 'INVALID_CREDENTIALS');
   }
 
   // Prevent Google users from using password login
@@ -180,11 +180,12 @@ const login = async ({ email, password }) => {
 // ────────────────────────────────────────────────────────────
 // 4. GOOGLE LOGIN
 // ────────────────────────────────────────────────────────────
-const googleLogin = async ({ idToken }) => {
+const googleLogin = async ({ code }) => {
   // Verify Google token
   let googlePayload;
   try {
-    googlePayload = await verifyGoogleToken(idToken);
+    googlePayload = await verifyGoogleCode(code);
+  
   } catch (err) {
     throw new AppError('Invalid Google token.', 401, 'INVALID_GOOGLE_TOKEN');
   }

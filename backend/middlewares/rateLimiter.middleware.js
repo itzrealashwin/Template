@@ -35,7 +35,7 @@ const authLimiter = rateLimit({
  */
 const otpLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 hour
-  max: 3, // 3 OTP requests per hour
+  max: 50, // 3 OTP requests per hour
   standardHeaders: true,
   legacyHeaders: false,
   message: {
